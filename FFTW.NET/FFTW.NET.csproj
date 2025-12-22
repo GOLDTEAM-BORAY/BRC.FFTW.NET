@@ -1,38 +1,49 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
-  <PropertyGroup>
-    <TargetFramework>netstandard1.3</TargetFramework>
-    <AllowUnsafeBlocks>True</AllowUnsafeBlocks>
-    <PackageRequireLicenseAcceptance>True</PackageRequireLicenseAcceptance>
-    <Authors>ArgusMagnus</Authors>
-    <Company />
-    <Product />
-    <Description>C#/.NET Wrapper for FFTW (http://www.fftw.org/, native binaries are included).</Description>
-    <Copyright>Copyright 2017</Copyright>
-    <PackageLicenseUrl>https://github.com/ArgusMagnus/FFTW.NET/blob/master/LICENSE</PackageLicenseUrl>
-    <PackageProjectUrl>https://github.com/ArgusMagnus/FFTW.NET</PackageProjectUrl>
-    <RepositoryType>Git</RepositoryType>
-    <RepositoryUrl>https://github.com/ArgusMagnus/FFTW.NET</RepositoryUrl>
-    <PackageTags>FFTW FFTW.NET FFT</PackageTags>
-    <GeneratePackageOnBuild>False</GeneratePackageOnBuild>
-    <AssemblyVersion>1.0.1.0</AssemblyVersion>
-    <Version>1.0.1</Version>
-    <PackageReleaseNotes>- Changed to .NETStandard library (1.3)
-- Added FftwInterop.Version property which returns the version of the used FFTW libs</PackageReleaseNotes>
-  </PropertyGroup>
-  <ItemGroup>
-    <None Update="FftwInterop.tt">
-      <Generator>TextTemplatingFileGenerator</Generator>
-      <LastGenOutput>FftwInterop.g.cs</LastGenOutput>
-    </None>
-  </ItemGroup>
-  <ItemGroup>
-    <Service Include="{508349b6-6b84-4df5-91f0-309beebad82d}" />
-  </ItemGroup>
-  <ItemGroup>
-    <Compile Update="FftwInterop.g.cs">
-      <DesignTime>True</DesignTime>
-      <AutoGen>True</AutoGen>
-      <DependentUpon>FftwInterop.tt</DependentUpon>
-    </Compile>
-  </ItemGroup>
+	<PropertyGroup>
+		<TargetFrameworks>net9.0;net10.0</TargetFrameworks>
+		<ImplicitUsings>enable</ImplicitUsings>
+		<AllowUnsafeBlocks>True</AllowUnsafeBlocks>
+		<PackageRequireLicenseAcceptance>True</PackageRequireLicenseAcceptance>
+		<Platforms>AnyCPU;x86</Platforms>
+		<LangVersion>Latest</LangVersion>
+
+		<!-- AOT 相关配置 -->
+		<TrimMode>full</TrimMode>
+		<IsAotCompatible>true</IsAotCompatible>
+		<InvariantGlobalization>true</InvariantGlobalization>
+		<IlcGenerateStackTraceData>false</IlcGenerateStackTraceData>
+		<IlcOptimizationPreference>Size</IlcOptimizationPreference>
+		<IlcFoldIdenticalMethodBodies>true</IlcFoldIdenticalMethodBodies>
+
+		<PackageId>BRC.FFTW.NET</PackageId>
+		<Authors>ArgusMagnus</Authors>
+		<Company />
+		<Product />
+		<Description>C#/.NET Wrapper for FFTW (http://www.fftw.org/, native binaries are included).</Description>
+		<Copyright>Copyright 2017</Copyright>
+		<PackageLicenseFile>LICENSE</PackageLicenseFile>
+		<PackageReadmeFile>README.md</PackageReadmeFile>
+		<PackageProjectUrl>https://github.com/GOLDTEAM-BORAY/BRC.FFTW.NET</PackageProjectUrl>
+		<RepositoryUrl>https://github.com/GOLDTEAM-BORAY/BRC.FFTW.NET</RepositoryUrl>
+		<RepositoryType>Git</RepositoryType>
+		<RepositoryUrl>https://github.com/ArgusMagnus/FFTW.NET</RepositoryUrl>
+		<PackageTags>FFTW FFTW.NET FFT</PackageTags>
+		<GeneratePackageOnBuild>True</GeneratePackageOnBuild>
+		<AssemblyVersion>1.0.2.0</AssemblyVersion>
+		<Version>1.0.2</Version>
+		<PackageReleaseNotes>
+			- Changed to .NETStandard library (1.3)
+			- Added FftwInterop.Version property which returns the version of the used FFTW libs
+		</PackageReleaseNotes>
+	</PropertyGroup>
+
+	<!-- 将原生DLL根据平台分类并包含到包中的runtimes目录 -->
+	<ItemGroup>
+		<None Include="../LICENSE" Pack="true" PackagePath=""/>
+		<None Include="../README.md" Pack="true" PackagePath=""/>
+		<None Include="Lib/win-x64/*" Pack="true" PackagePath="runtimes/win-x64/native/%(Filename)%(Extension)" />
+		<None Include="Lib/win-x86/*" Pack="true" PackagePath="runtimes/win-x86/native/%(Filename)%(Extension)" />
+		<None Include="$(PackageId).targets" Pack="true" PackagePath="buildTransitive/$(PackageId).targets" />
+	</ItemGroup>
+
 </Project>

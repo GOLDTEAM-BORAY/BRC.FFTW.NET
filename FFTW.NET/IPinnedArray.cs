@@ -7,6 +7,7 @@ License: Microsoft Reciprocal License (MS-RL)
 #endregion
 
 using System;
+using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 
 namespace FFTW.NET
@@ -17,7 +18,8 @@ namespace FFTW.NET
 		int Rank { get; }
 		int Length { get; }
 		IntPtr Pointer { get; }
-		bool IsDisposed { get; }
+		Memory<T> AsMemory();
+        bool IsDisposed { get; }
 
 		int GetLength(int dimension);
 		int[] GetSize();
@@ -54,12 +56,10 @@ namespace FFTW.NET
 		public static void CopyTo<T>(this IPinnedArray<T> src, IPinnedArray<T> dst, int[] srcIndices, int[] dstIndices, int count)
 			where T : struct
 		{
-			if (srcIndices == null)
-				throw new ArgumentNullException(nameof(srcIndices));
-			if (dstIndices == null)
-				throw new ArgumentNullException(nameof(dstIndices));
+            ArgumentNullException.ThrowIfNull(srcIndices);
+            ArgumentNullException.ThrowIfNull(dstIndices);
 
-			int srcIndex = src.GetIndex(srcIndices);
+            int srcIndex = src.GetIndex(srcIndices);
 			int dstIndex = dst.GetIndex(dstIndices);
 			src.CopyTo(dst, srcIndex, dstIndex, count);
 		}
@@ -69,7 +69,9 @@ namespace FFTW.NET
 			src.CopyTo(dst, 0, 0, dst.Length);
 		}
 
-		public static int GetIndex<T>(this IPinnedArray<T> array, int[] indices)
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static int GetIndex<T>(this IPinnedArray<T> array, int[] indices)
 			where T : struct
 		{
 			if (indices.Length != array.Rank)

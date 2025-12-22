@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+
+	<ItemGroup Condition="'$(PublishAot)' == 'True'">
+		<DirectPInvoke Include="fftw3" />
+		<NativeLibrary Include="$(MSBuildThisFileDirectory)..\runtimes\$(RuntimeIdentifier)\native\fftw3_static.lib" />
+		<LinkerArg Include="/NODEFAULTLIB:MSVCRT" />
+		<IlcArg Include="--instruction-set:avx2" />
+	</ItemGroup>
+
+	<Target Name="RemoveNativeDllsIfAot" AfterTargets="Publish" Condition="'$(PublishAot)' == 'True'">
+		<ItemGroup>
+			<FilesToDelete Include="$(PublishDir)**\fftw3.dll" />
+			<FilesToDelete Include="$(PublishDir)**\fftw3_static.lib" />
+		</ItemGroup>
+		<Delete Files="@(FilesToDelete)" TreatErrorsAsWarnings="true"/>
+		<Message Importance="high" Text="[BRC.FFTW.NET] NativeAOT 模式已启用，已清理动态库: @(FilesToDelete)" />
+	</Target>
+</Project>

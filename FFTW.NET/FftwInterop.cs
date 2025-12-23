@@ -87,15 +87,7 @@ namespace FFTW.NET
 
         public static bool IsAvailable => _version != null;
 
-        internal static object Lock
-        {
-            get
-            {
-                if (!IsAvailable)
-                    throw new InvalidOperationException($"{nameof(IsAvailable)} is false.");
-                return _version;
-            }
-        }
+        internal static object Lock => _version;
 
         [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
         public delegate void WriteCharHandler(byte c, IntPtr ptr);
@@ -119,25 +111,26 @@ namespace FFTW.NET
             byte[] prefix = Encoding.ASCII.GetBytes(VersionPrefix);
             int i = 0;
             StringBuilder sb = new StringBuilder();
-            FftwInterop.WriteCharHandler writeChar = (c, ptr) =>
-                {
-                    if (i < 0)
-                        return;
+            void writeChar(byte c, nint ptr)
+            {
+                if (i < 0)
+                    return;
 
-                    if (i == VersionPrefix.Length)
-                    {
-                        if (c == WhiteSpace)
-                            i = -1;
-                        else
-                            sb.Append((char)c);
-                    }
-                    else if (c == prefix[i])
-                        i++;
+                if (i == VersionPrefix.Length)
+                {
+                    if (c == WhiteSpace)
+                        i = -1;
                     else
-                        i = 0;
-                };
+                        sb.Append((char)c);
+                }
+                else if (c == prefix[i])
+                    i++;
+                else
+                    i = 0;
+            }
             // This is only called on initialization, so no synchronization/lock is required
-            FftwInterop.fftw_export_wisdom(writeChar, IntPtr.Zero);
+            fftw_export_wisdom(writeChar, IntPtr.Zero);
+
             return sb.ToString();
         }
 

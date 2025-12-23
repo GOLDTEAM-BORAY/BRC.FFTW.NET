@@ -1,14 +1,17 @@
 <?xml version="1.0" encoding="utf-8"?>
 <Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
-
-	<ItemGroup Condition="'$(PublishAot)' == 'True'">
+	
+	<ItemGroup Condition="$(PublishAot) == 'True'">
 		<DirectPInvoke Include="fftw3" />
 		<NativeLibrary Include="$(MSBuildThisFileDirectory)..\runtimes\$(RuntimeIdentifier)\native\fftw3_static.lib" />
 		<LinkerArg Include="/NODEFAULTLIB:MSVCRT" />
-		<IlcArg Include="--instruction-set:avx2" />
 	</ItemGroup>
+	
+	<PropertyGroup Condition="$(PublishAot) == 'True'">
+		<IlcInstructionSet>avx2</IlcInstructionSet>
+	</PropertyGroup>
 
-	<Target Name="RemoveNativeDllsIfAot" AfterTargets="Publish" Condition="'$(PublishAot)' == 'True'">
+	<Target Name="RemoveNativeDllsIfAot" AfterTargets="Publish" Condition="$(PublishAot) == 'True'">
 		<ItemGroup>
 			<FilesToDelete Include="$(PublishDir)**\fftw3.dll" />
 			<FilesToDelete Include="$(PublishDir)**\fftw3_static.lib" />

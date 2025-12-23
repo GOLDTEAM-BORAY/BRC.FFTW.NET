@@ -37,8 +37,6 @@ namespace FFTW.NET
         /// </summary>
         const int MemoryAlignment = 16;
 
-        //static readonly BufferPool<byte> _bufferPool = new BufferPool<byte>(LohThreshold);
-
         /// <summary>
         /// Performs a complex-to-complex fast fourier transformation. The dimension is inferred from the input (<see cref="Array{T}.Rank"/>).
         /// </summary>
@@ -57,11 +55,9 @@ namespace FFTW.NET
         {
             if ((plannerFlags & PlannerFlags.Estimate) == PlannerFlags.Estimate)
             {
-                using (var plan = FftwPlanC2C.Create(input, output, direction, plannerFlags, nThreads))
-                {
-                    plan.Execute();
-                    return;
-                }
+                using var plan = FftwPlanC2C.Create(input, output, direction, plannerFlags, nThreads);
+                plan.Execute();
+                return;
             }
 
             using (var plan = FftwPlanC2C.Create(input, output, direction, plannerFlags | PlannerFlags.WisdomOnly, nThreads))
@@ -78,16 +74,13 @@ namespace FFTW.NET
             /// a different buffer to avoid overwriting the input
             if (input != output)
             {
-                using (var plan = FftwPlanC2C.Create(output, output, input.Rank, input.GetSize(), direction, plannerFlags, nThreads))
-                {
-                    input.CopyTo(output);
-                    plan.Execute();
-                }
+                using var plan = FftwPlanC2C.Create(output, output, input.Rank, input.GetSize(), direction, plannerFlags, nThreads);
+                input.CopyTo(output);
+                plan.Execute();
             }
             else
             {
-                //using (var bufferContainer = _bufferPool.RequestBuffer(input.Length * Marshal.SizeOf<Complex>() + MemoryAlignment))
-                using AlignedArrayComplex buffer = new AlignedArrayComplex(MemoryAlignment, input.GetSize());
+                using var buffer = new AlignedArrayComplex(MemoryAlignment, input.GetSize());
                 using var plan = FftwPlanC2C.Create(buffer, buffer, input.Rank, input.GetSize(), direction, plannerFlags, nThreads);
                 input.CopyTo(plan.Input);
                 plan.Execute();
@@ -104,11 +97,9 @@ namespace FFTW.NET
         {
             if ((plannerFlags & PlannerFlags.Estimate) == PlannerFlags.Estimate)
             {
-                using (var plan = FftwPlanRC.Create(input, output, DftDirection.Forwards, plannerFlags, nThreads))
-                {
-                    plan.Execute();
-                    return;
-                }
+                using var plan = FftwPlanRC.Create(input, output, DftDirection.Forwards, plannerFlags, nThreads);
+                plan.Execute();
+                return;
             }
 
             using (var plan = FftwPlanRC.Create(input, output, DftDirection.Forwards, plannerFlags | PlannerFlags.WisdomOnly, nThreads))
@@ -123,11 +114,9 @@ namespace FFTW.NET
             /// If with <see cref="PlannerFlags.WisdomOnly"/> no plan can be created
             /// and <see cref="PlannerFlags.Estimate"/> is not specified, we use
             /// a different buffer to avoid overwriting the input
-
+            using (var buffer = new AlignedArrayDouble(MemoryAlignment, input.GetSize()))
+            using (var plan = FftwPlanRC.Create(buffer, output, DftDirection.Forwards, plannerFlags, nThreads))
             {
-                //using (var bufferContainer = _bufferPool.RequestBuffer(input.Length * sizeof(double) + MemoryAlignment))
-                using var buffer = new AlignedArrayDouble(MemoryAlignment, input.GetSize());
-                using var plan = FftwPlanRC.Create(buffer, output, DftDirection.Forwards, plannerFlags, nThreads);
                 input.CopyTo(plan.BufferReal);
                 plan.Execute();
             }
@@ -147,7 +136,7 @@ namespace FFTW.NET
                 return;
             }
 
-            using (FftwPlanRC plan = FftwPlanRC.Create(output, input, DftDirection.Backwards, plannerFlags | PlannerFlags.WisdomOnly, nThreads))
+            using (var plan = FftwPlanRC.Create(output, input, DftDirection.Backwards, plannerFlags | PlannerFlags.WisdomOnly, nThreads))
             {
                 if (plan != null)
                 {
@@ -159,11 +148,9 @@ namespace FFTW.NET
             /// If with <see cref="PlannerFlags.WisdomOnly"/> no plan can be created
             /// and <see cref="PlannerFlags.Estimate"/> is not specified, we use
             /// a different buffer to avoid overwriting the input
-
+            using (var buffer = new AlignedArrayComplex(MemoryAlignment, input.GetSize()))
+            using (var plan = FftwPlanRC.Create(output, buffer, DftDirection.Backwards, plannerFlags, nThreads))
             {
-                //using (var bufferContainer = _bufferPool.RequestBuffer(input.Length * Marshal.SizeOf<Complex>() + MemoryAlignment))
-                using var buffer = new AlignedArrayComplex(MemoryAlignment, input.GetSize());
-                using var plan = FftwPlanRC.Create(output, buffer, DftDirection.Backwards, plannerFlags, nThreads);
                 input.CopyTo(plan.BufferComplex);
                 plan.Execute();
             }

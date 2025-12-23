@@ -1,130 +1,125 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+﻿using FFTW.NET;
 using System.Numerics;
-using FFTW.NET;
 
 namespace TestApp
 {
-	class Program
-	{
-		static void Main(string[] args)
-		{
-			/// Make sure either libfftw3-3-x86.dll or libfftw3-3-x64.dll
-			/// (according to <see cref="Environment.Is64BitProcess"/>)
-			/// is in the output directory
+    class Program
+    {
+        static void Main(string[] args)
+        {
+            /// Make sure either libfftw3-3-x86.dll or libfftw3-3-x64.dll
+            /// (according to <see cref="Environment.Is64BitProcess"/>)
+            /// is in the output directory
 
-			DFT.Wisdom.Import("wisdom.txt");
+            DFT.Wisdom.Import("wisdom.txt");
 
-			Example1D();
+            Example1D();
 
-			Console.ReadKey();
-			Console.Clear();
+            Console.ReadKey();
+            Console.Clear();
 
-			Example2D();
+            Example2D();
 
-			Console.ReadKey();
-			Console.Clear();
+            Console.ReadKey();
+            Console.Clear();
 
-			ExampleR2C();
+            ExampleR2C();
 
-			Console.ReadKey();
-			Console.Clear();
+            Console.ReadKey();
+            Console.Clear();
 
-			ExampleUsePlanDirectly();
+            ExampleUsePlanDirectly();
 
-			DFT.Wisdom.Export("wisdom.txt");
-			Console.WriteLine(DFT.Wisdom.Current);
-			Console.ReadKey();
-		}
+            DFT.Wisdom.Export("wisdom.txt");
+            Console.WriteLine(DFT.Wisdom.Current);
+            Console.ReadKey();
+        }
 
-		static void Example1D()
-		{
-			Complex[] input = new Complex[2048];
-			Complex[] output = new Complex[input.Length];
+        static void Example1D()
+        {
+            Complex[] input = new Complex[2048];
+            Complex[] output = new Complex[input.Length];
 
-			for (int i = 0; i < input.Length; i++)
-				input[i] = Math.Sin(i * 2 * Math.PI * 128 / input.Length);
+            for (int i = 0; i < input.Length; i++)
+                input[i] = Math.Sin(i * 2 * Math.PI * 128 / input.Length);
 
-			using (var pinIn = new PinnedArray<Complex>(input))
-			using (var pinOut = new PinnedArray<Complex>(output))
-			{
-				DFT.FFT(pinIn, pinOut);
-				DFT.IFFT(pinOut, pinOut);
-			}
+            using (var pinIn = new PinnedArray<Complex>(input))
+            using (var pinOut = new PinnedArray<Complex>(output))
+            {
+                DFT.FFT(pinIn, pinOut);
+                DFT.IFFT(pinOut, pinOut);
+            }
 
-			for (int i = 0; i < input.Length; i++)
-				Console.WriteLine(output[i] / input[i]);
-		}
+            for (int i = 0; i < input.Length; i++)
+                Console.WriteLine(output[i] / input[i]);
+        }
 
-		static void Example2D()
-		{
-			using (var input = new AlignedArrayComplex(16, 64, 16))
-			using (var output = new AlignedArrayComplex(16, input.GetSize()))
-			{
-				for (int row = 0; row < input.GetLength(0); row++)
-				{
-					for (int col = 0; col < input.GetLength(1); col++)
-						input[row, col] = (double)row * col / input.Length;
-				}
+        static void Example2D()
+        {
+            using (var input = new AlignedArrayComplex(16, 64, 16))
+            using (var output = new AlignedArrayComplex(16, input.GetSize()))
+            {
+                for (int row = 0; row < input.GetLength(0); row++)
+                {
+                    for (int col = 0; col < input.GetLength(1); col++)
+                        input[row, col] = (double)row * col / input.Length;
+                }
 
-				DFT.FFT(input, output);
-				DFT.IFFT(output, output);
+                DFT.FFT(input, output);
+                DFT.IFFT(output, output);
 
-				for (int row = 0; row < input.GetLength(0); row++)
-				{
-					for (int col = 0; col < input.GetLength(1); col++)
-						Console.Write((output[row, col].Real / input[row,col].Real/input.Length).ToString("F2").PadLeft(6));
-					Console.WriteLine();
-				}
-			}
-		}
+                for (int row = 0; row < input.GetLength(0); row++)
+                {
+                    for (int col = 0; col < input.GetLength(1); col++)
+                        Console.Write((output[row, col].Real / input[row, col].Real / input.Length).ToString("F2").PadLeft(6));
+                    Console.WriteLine();
+                }
+            }
+        }
 
-		static void ExampleR2C()
-		{
-			double[] input = new double[97];
+        static void ExampleR2C()
+        {
+            double[] input = new double[97];
 
-			var rand = new Random();
+            var rand = new Random();
 
-			for (int i = 0; i < input.Length; i++)
-				input[i] = rand.NextDouble();
+            for (int i = 0; i < input.Length; i++)
+                input[i] = rand.NextDouble();
 
-			using (var pinIn = new PinnedArray<double>(input))
-			using (var output = new FftwArrayComplex(DFT.GetComplexBufferSize(pinIn.GetSize())))
-			{
-				DFT.FFT(pinIn, output);
-				for (int i = 0; i < output.Length; i++)
-					Console.WriteLine(output[i]);
-			}
-		}
+            using (var pinIn = new PinnedArray<double>(input))
+            using (var output = new FftwArrayComplex(DFT.GetComplexBufferSize(pinIn.GetSize())))
+            {
+                DFT.FFT(pinIn, output);
+                for (int i = 0; i < output.Length; i++)
+                    Console.WriteLine(output[i]);
+            }
+        }
 
-		static void ExampleUsePlanDirectly()
-		{
-			// Use the same arrays for as many transformations as you like.
-			// If you can use the same arrays for your transformations, this is faster than calling DFT.FFT / DFT.IFFT
-			using (var timeDomain = new FftwArrayComplex(253))
-			using (var frequencyDomain = new FftwArrayComplex(timeDomain.GetSize()))
-			using (var fft = FftwPlanC2C.Create(timeDomain, frequencyDomain, DftDirection.Forwards))
-			using (var ifft = FftwPlanC2C.Create(frequencyDomain, timeDomain, DftDirection.Backwards))
-			{
-				// Set the input after the plan was created as the input may be overwritten
-				// during planning
-				for (int i = 0; i < timeDomain.Length; i++)
-					timeDomain[i] = i % 10;
+        static void ExampleUsePlanDirectly()
+        {
+            // Use the same arrays for as many transformations as you like.
+            // If you can use the same arrays for your transformations, this is faster than calling DFT.FFT / DFT.IFFT
+            using (var timeDomain = new FftwArrayComplex(253))
+            using (var frequencyDomain = new FftwArrayComplex(timeDomain.GetSize()))
+            using (var fft = FftwPlanC2C.Create(timeDomain, frequencyDomain, DftDirection.Forwards))
+            using (var ifft = FftwPlanC2C.Create(frequencyDomain, timeDomain, DftDirection.Backwards))
+            {
+                // Set the input after the plan was created as the input may be overwritten
+                // during planning
+                for (int i = 0; i < timeDomain.Length; i++)
+                    timeDomain[i] = i % 10;
 
-				// timeDomain -> frequencyDomain
-				fft.Execute();
+                // timeDomain -> frequencyDomain
+                fft.Execute();
 
-				for (int i = frequencyDomain.Length / 2; i < frequencyDomain.Length; i++)
-					frequencyDomain[i] = 0;
+                for (int i = frequencyDomain.Length / 2; i < frequencyDomain.Length; i++)
+                    frequencyDomain[i] = 0;
 
-				// frequencyDomain -> timeDomain
-				ifft.Execute();
+                // frequencyDomain -> timeDomain
+                ifft.Execute();
 
-				// Do as many forwards and backwards transformations here as you like
-			}
-		}
-	}
+                // Do as many forwards and backwards transformations here as you like
+            }
+        }
+    }
 }

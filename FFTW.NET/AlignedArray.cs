@@ -15,47 +15,87 @@ using System.Runtime.Intrinsics.X86;
 
 namespace FFTW.NET;
 
-public unsafe class AlignedArray<[DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicConstructors | DynamicallyAccessedMemberTypes.NonPublicConstructors)] T>(int alignment, params int[] lengths) : AbstractPinnedArray<T>(lengths)
+public unsafe class AlignedArray<[DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicConstructors | DynamicallyAccessedMemberTypes.NonPublicConstructors)] T> : IPinnedArray<T>
     where T : unmanaged
 {
+    private readonly T* _buffer;
+    readonly int _length;
+    readonly int[] _lengths;
 
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public override unsafe T* Alloc(nuint size)
+    public int Length => _length;
+    private bool _isDisposed;
+    public bool IsDisposed => _isDisposed;
+    public int Rank => _lengths.Length;
+
+    public IntPtr Pointer => new(_buffer);
+
+    public Memory<T> AsMemory() => new UnmanagedMemoryManager<T>(_buffer, _length).Memory;
+
+    public AlignedArray(int alignment, params int[] lengths)
     {
-        return (T*)NativeMemory.AlignedAlloc(size, (nuint)alignment);
+        _length = Utils.GetTotalSize(lengths);
+        _lengths = lengths;
+
+        var length = Marshal.SizeOf<T>();
+        foreach (var n in lengths)
+            length *= n;
+        _buffer = (T*)NativeMemory.AlignedAlloc((nuint)length, (nuint)alignment);
     }
 
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public override unsafe void Free(T* ptr)
+
+    public void Dispose()
     {
-        NativeMemory.AlignedFree(ptr);
+        if (!_isDisposed)
+        {
+            GC.SuppressFinalize(this);
+            NativeMemory.AlignedFree(_buffer);
+            _isDisposed = true;
+        }
+    }
+
+    ~AlignedArray()
+    {
+        Dispose();
+    }
+
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public int GetLength(int dimension) => _lengths[dimension];
+
+    public int[] GetSize()
+    {
+        int[] result = new int[Rank];
+        Buffer.BlockCopy(_lengths, 0, result, 0, Rank * sizeof(int));
+        return result;
+    }
+
+    public T this[int i1]
+    {
+        get => *(_buffer + i1);
+        set => *(_buffer + i1) = value;
+    }
+
+    public T this[int i1, int i2]
+    {
+        get => *(_buffer + (i2 + _lengths[1] * i1));
+        set => *(_buffer + (i2 + _lengths[1] * i1)) = value;
+    }
+
+    public T this[int i1, int i2, int i3]
+    {
+        get => *(_buffer + (i3 + _lengths[2] * (i2 + _lengths[1] * i1)));
+        set => *(_buffer + (i3 + _lengths[2] * (i2 + _lengths[1] * i1))) = value;
+    }
+
+    public T this[params int[] indices]
+    {
+        get => *(_buffer + this.GetIndex(indices));
+        set => *(_buffer + this.GetIndex(indices)) = value;
     }
 }
 
 public class AlignedArrayComplex(int alignment, params int[] lengths) : AlignedArray<Complex>(alignment, lengths)
 {
-    public void MultiplyInPlace(AlignedArrayComplex right)
-    {
-        var vectorLeft = MemoryMarshal.Cast<Complex, Vector256<double>>(AsMemory().Span);
-        var vectorRight = MemoryMarshal.Cast<Complex, Vector256<double>>(right.AsMemory().Span);
-        var matrix = Vector256.Create(1.0, -1.0, 1.0, -1.0);
-        for (int i = 0; i < vectorLeft.Length; i++)
-        {
-            var l = vectorLeft[i];
-            var r = vectorRight[i];
-            vectorLeft[i] = Avx.HorizontalAdd(
-                Avx.Multiply(
-                    Avx.Multiply(l, r),
-                    matrix),
-                Avx.Multiply(
-                    l,
-                    Avx.Permute(r, 0b0101)
-                    ));
-        }
-        for (int i = 2 * vectorLeft.Length; i < right.Length; i++)
-            this[i] = this[i] * right[i];
-    }
-
     public void MultiplyInPlace(Memory<Complex> right)
     {
         var vectorLeft = MemoryMarshal.Cast<Complex, Vector256<double>>(AsMemory().Span);
@@ -66,17 +106,20 @@ public class AlignedArrayComplex(int alignment, params int[] lengths) : AlignedA
             var l = vectorLeft[i];
             var r = vectorRight[i];
             vectorLeft[i] = Avx.HorizontalAdd(
-                Avx.Multiply(
-                    Avx.Multiply(l, r),
-                    matrix),
-                Avx.Multiply(
-                    l,
-                    Avx.Permute(r, 0b0101)
-                    ));
+                Avx.Multiply(Avx.Multiply(l, r), matrix),
+                Avx.Multiply(l, Avx.Permute(r, 0b0101)));
         }
         for (int i = 2 * vectorLeft.Length; i < right.Length; i++)
             this[i] = this[i] * right.Span[i];
     }
+    public void MultiplyInPlace(AlignedArrayComplex right)
+    {
+        MultiplyInPlace(right.AsMemory());
+    }
+}
+
+public class FftwArrayComplex(params int[] lengths) : AlignedArrayComplex(Marshal.SizeOf<Complex>(), lengths)
+{
 }
 
 public class AlignedArrayDouble(int alignment, params int[] lengths) : AlignedArray<double>(alignment, lengths)

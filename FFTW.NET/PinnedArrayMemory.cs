@@ -1,6 +1,5 @@
 ﻿using System.Buffers;
 using System.Runtime.CompilerServices;
-using System.Runtime.InteropServices;
 
 namespace FFTW.NET;
 
@@ -21,6 +20,14 @@ public unsafe class PinnedArrayMemory<T> : MemoryManager<T>, IPinnedArray<T> whe
 
 
     public PinnedArrayMemory(Memory<T> memory)
+    {
+        _memoryHandle = memory.Pin();
+        _length = memory.Length;
+        _lengths = [memory.Length];
+        _buffer = (T*)_memoryHandle.Value.Pointer;
+    }
+
+    public PinnedArrayMemory(ReadOnlyMemory<T> memory)
     {
         _memoryHandle = memory.Pin();
         _length = memory.Length;

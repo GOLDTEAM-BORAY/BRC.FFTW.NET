@@ -29,9 +29,9 @@
 		<RepositoryUrl>https://github.com/ArgusMagnus/FFTW.NET</RepositoryUrl>
 		<PackageTags>FFTW FFTW.NET FFT</PackageTags>
 		<GeneratePackageOnBuild>True</GeneratePackageOnBuild>
-		<Version>1.0.4</Version>
+		<Version>1.0.5</Version>
 
-		<AssemblyVersion>1.0.4.*</AssemblyVersion>
+		<AssemblyVersion>$(Version).*</AssemblyVersion>
 		<Deterministic>false</Deterministic>
 		<GenerateAssemblyFileVersionAttribute>false</GenerateAssemblyFileVersionAttribute>
 		

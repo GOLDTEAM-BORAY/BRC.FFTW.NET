@@ -18,7 +18,6 @@ namespace FFTW.NET
 		int Rank { get; }
 		int Length { get; }
 		IntPtr Pointer { get; }
-		Memory<T> AsMemory();
         bool IsDisposed { get; }
 
 		int GetLength(int dimension);

@@ -6,7 +6,7 @@ License: Microsoft Reciprocal License (MS-RL)
 */
 #endregion
 
-using System.Diagnostics.CodeAnalysis;
+using System.Buffers;
 using System.Numerics;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
@@ -15,7 +15,7 @@ using System.Runtime.Intrinsics.X86;
 
 namespace FFTW.NET;
 
-public unsafe class AlignedArray<[DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicConstructors | DynamicallyAccessedMemberTypes.NonPublicConstructors)] T> : IPinnedArray<T>
+public unsafe class AlignedArray<T> : MemoryManager<T>, IPinnedArray<T>
     where T : unmanaged
 {
     private readonly T* _buffer;
@@ -29,7 +29,7 @@ public unsafe class AlignedArray<[DynamicallyAccessedMembers(DynamicallyAccessed
 
     public IntPtr Pointer => new(_buffer);
 
-    public Memory<T> AsMemory() => new UnmanagedMemoryManager<T>(_buffer, _length).Memory;
+    public override Span<T> GetSpan() => new(_buffer, _length);
 
     public AlignedArray(int alignment, params int[] lengths)
     {
@@ -42,20 +42,13 @@ public unsafe class AlignedArray<[DynamicallyAccessedMembers(DynamicallyAccessed
         _buffer = (T*)NativeMemory.AlignedAlloc((nuint)length, (nuint)alignment);
     }
 
-
-    public void Dispose()
+    protected override void Dispose(bool disposing)
     {
         if (!_isDisposed)
         {
-            GC.SuppressFinalize(this);
             NativeMemory.AlignedFree(_buffer);
             _isDisposed = true;
         }
-    }
-
-    ~AlignedArray()
-    {
-        Dispose();
     }
 
 
@@ -67,6 +60,16 @@ public unsafe class AlignedArray<[DynamicallyAccessedMembers(DynamicallyAccessed
         int[] result = new int[Rank];
         Buffer.BlockCopy(_lengths, 0, result, 0, Rank * sizeof(int));
         return result;
+    }
+
+    public override MemoryHandle Pin(int elementIndex = 0)
+    {
+        throw new NotSupportedException();
+    }
+
+    public override void Unpin()
+    {
+        throw new NotSupportedException();
     }
 
     public T this[int i1]
@@ -98,7 +101,7 @@ public class AlignedArrayComplex(int alignment, params int[] lengths) : AlignedA
 {
     public void MultiplyInPlace(Memory<Complex> right)
     {
-        var vectorLeft = MemoryMarshal.Cast<Complex, Vector256<double>>(AsMemory().Span);
+        var vectorLeft = MemoryMarshal.Cast<Complex, Vector256<double>>(GetSpan());
         var vectorRight = MemoryMarshal.Cast<Complex, Vector256<double>>(right.Span);
         var matrix = Vector256.Create(1.0, -1.0, 1.0, -1.0);
         for (int i = 0; i < vectorLeft.Length; i++)
@@ -114,7 +117,7 @@ public class AlignedArrayComplex(int alignment, params int[] lengths) : AlignedA
     }
     public void MultiplyInPlace(AlignedArrayComplex right)
     {
-        MultiplyInPlace(right.AsMemory());
+        MultiplyInPlace(right.Memory);
     }
 }
 
